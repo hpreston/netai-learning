@@ -1,0 +1,4 @@
+# NetAI Learning
+This is my playground for learning about "NetAI", or the experimentation of how AI fits into the network engineers world.  This project will include demonstrations, labs, sample code, and ideas I have as I work on learning a little about how I can "use" AI to make myself more efficient, how I can "build" AI enhanced applications and network automation systems, how I can "supervise" AI powered agents and integrations.  
+
+All code and examples in this project are offered freely and without warranty to the world for inspiration and ideas. Like anything with AI, use with your critical thinking hat on.  
