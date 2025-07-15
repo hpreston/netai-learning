@@ -1,0 +1,10 @@
+[project]
+name = "mcp-pyats"
+version = "0.1.0"
+description = "This is a basic MCP Server for using pyATS to interact with network devices."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastmcp>=2.10.5",
+    "pyats[full]>=25.6",
+]
