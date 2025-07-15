@@ -2,9 +2,84 @@ from typing import Optional, Dict, Any
 from fastmcp import FastMCP
 from genie.testbed import load
 import asyncio
+import logging
 
 
 mcp = FastMCP()
+
+# Track connected devices and last time interacted with
+#  Example:
+#     device_name: {
+#         "device_object": {},
+#         "last_interaction": "2023-10-01T12:00:00Z"
+#     }
+connected_devices = {}
+
+
+def get_pyats_device(
+    device_name: str,
+    username: str,
+    password: str,
+    ip_address: str,
+    ssh_port: int = 22,
+    network_os: Optional[str] = None,
+) -> Optional[Any]:
+    """
+    Retrieves the PyATS device object for a given device name.
+
+    Args:
+        device_name (str): The logical name of the device.
+
+    Returns:
+        Optional[Any]: The PyATS device object if found, otherwise None.
+    """
+    logging.info(f"Creating new PyATS device object for {device_name}")
+
+    if network_os is None:
+        # Default to "ios" if not defined.  The function will attempt to auto-detect the OS.
+        network_os = "ios"
+
+    # Structure a dictionary for the device configuration that can be loaded by PyATS
+    device_dict = {
+        "devices": {
+            device_name: {
+                "os": network_os,
+                "credentials": {
+                    "default": {"username": username, "password": password}
+                },
+                "connections": {
+                    "ssh": {"protocol": "ssh", "ip": ip_address, "port": ssh_port}
+                },
+            }
+        }
+    }
+    testbed = load(device_dict)
+    device = testbed.devices[device_name]
+
+    return device
+
+
+def _cleanup_connected_devices():
+    """
+    Cleans up the connected devices dictionary by removing devices that have not been interacted with
+    for more than 5 minutes.
+    """
+    current_time = asyncio.get_event_loop().time()
+    to_remove = [
+        device_name
+        for device_name, info in connected_devices.items()
+        if current_time - info["last_interaction"] > # 300  # 5 minutes
+    ]
+    for device_name in to_remove:
+        logging.info(f"Removing inactive device: {device_name}")
+
+        # Disconnect the device if it is connected
+        device = connected_devices[device_name]["device_object"]
+        if device.connected:
+            asyncio.create_task(asyncio.to_thread(device.disconnect))
+
+        # Remove from the connected devices dictionary
+        del connected_devices[device_name]
 
 
 @mcp.tool()
@@ -54,36 +129,44 @@ def send_show_command(
         >>> if result:
         ...     print(f"Device version: {result.get('version', {}).get('version', 'Unknown')}")
     """
-    if network_os is None:
-        # Default to "ios" if not defined.  The function will attempt to auto-detect the OS.
-        network_os = "ios"
 
-    # Structure a dictionary for the device configuration that can be loaded by PyATS
-    device_dict = {
-        "devices": {
-            device_name: {
-                "os": network_os,
-                "credentials": {
-                    "default": {"username": username, "password": password}
-                },
-                "connections": {
-                    "ssh": {"protocol": "ssh", "ip": ip_address, "port": ssh_port}
-                },
-            }
+    # Check if we have a device object already connected
+    if device_name in connected_devices.keys():
+        device = connected_devices[device_name]["device_object"]
+        # Update last interaction time
+        connected_devices[device_name][
+            "last_interaction"
+        ] = asyncio.get_event_loop().time()
+    else:
+        # Create a new device object if not already connected
+        device = get_pyats_device(
+            device_name=device_name,
+            username=username,
+            password=password,
+            ip_address=ip_address,
+            ssh_port=ssh_port,
+            network_os=network_os,
+        )
+        if device is None:
+            print(f"Failed to create device object for {device_name}")
+            return None
+
+        # Store the device object and last interaction time
+        connected_devices[device_name] = {
+            "device_object": device,
+            "last_interaction": asyncio.get_event_loop().time(),
         }
-    }
-    testbed = load(device_dict)
-    device = testbed.devices[device_name]
 
     try:
         device.connect(learn_hostname=True, learn_os=True, log_stdout=True)
         output = device.parse(command)
-        # Disconnect in the background without waiting
-        asyncio.create_task(asyncio.to_thread(device.disconnect))
-        return output
     except Exception as e:
-        print(f"Error executing command '{command}': {e}")
-        return None
+        output = f"Error executing command '{command}': {e}"
+    finally:
+        # Clean up connected devices periodically
+        _cleanup_connected_devices()
+
+    return output
 
 
 if __name__ == "__main__":
