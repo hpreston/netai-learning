@@ -9,8 +9,6 @@ Date: 2025-07-18
 from typing import Optional, Dict, Any
 from fastmcp import FastMCP
 from genie.testbed import load
-import asyncio
-import logging
 
 
 mcp = FastMCP()
