@@ -1,3 +1,10 @@
+"""
+This is an MCP server that uses pyATS to interact with network devices.
+
+Created by: Hank Preston
+Date: 2025-07-18
+"""
+
 from typing import Optional, Dict, Any
 from fastmcp import FastMCP
 from genie.testbed import load
@@ -68,7 +75,7 @@ def _cleanup_connected_devices():
     to_remove = [
         device_name
         for device_name, info in connected_devices.items()
-        if current_time - info["last_interaction"] > # 300  # 5 minutes
+        if current_time - info["last_interaction"] > 300  # 5 minutes
     ]
     for device_name in to_remove:
         logging.info(f"Removing inactive device: {device_name}")
@@ -158,7 +165,11 @@ def send_show_command(
         }
 
     try:
-        device.connect(learn_hostname=True, learn_os=True, log_stdout=True)
+        device.connect(
+            learn_hostname=True,
+            learn_os=True,
+            log_stdout=True,
+        )
         output = device.parse(command)
     except Exception as e:
         output = f"Error executing command '{command}': {e}"
