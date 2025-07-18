@@ -1,5 +1,6 @@
 scratch*
 .env
+*venv*
 
 .DS_Store
 *.code-workspace
