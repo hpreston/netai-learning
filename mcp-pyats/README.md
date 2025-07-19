@@ -53,3 +53,6 @@ Be sure to use an LLM that supports tool use.  This server has been tested with:
 
 * [google/gemma-2-9b](https://lmstudio.ai/models/google/gemma-2-9b)
 * [qwen/qwen3-4b](https://lmstudio.ai/models/qwen/qwen3-4b)
+
+## Installing Project Requirements
+You can install the Python requirments for this project using either [`uv`](https://docs.astral.sh/uv/) with `uv sync`, or with `pip` and `pip install -r requirements.txt`
